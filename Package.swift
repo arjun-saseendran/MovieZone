@@ -12,12 +12,14 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-configuration.git", from: "1.0.0", traits: [.defaults, "CommandLineArguments"]),
+        .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.21.0")
     ],
     targets: [
         .executableTarget(name: "App",
             dependencies: [
                 .product(name: "Configuration", package: "swift-configuration"),
                 .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "PostgresNIO", package: "postgres-nio"),
             ],
             path: "Sources/App"
         ),
