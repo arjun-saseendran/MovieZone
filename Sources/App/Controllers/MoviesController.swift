@@ -6,7 +6,7 @@ struct MoviesController {
     var endpoints: RouteCollection<AppRequestContext>{
         let routeCollection = RouteCollection(context: AppRequestContext.self)
         routeCollection.get(use: getMovies)
-        // routeCollection.get(":id", use: getMovie)
+        routeCollection.get(":id", use: getMovie)
         routeCollection.post(use: createMovie)
         return routeCollection
     }
@@ -20,15 +20,18 @@ struct MoviesController {
        try  await repository.getAll()
     }
 
-    // func getMovie(request: Request, context: some RequestContext) async throws -> Movie? {
+    func getMovie(request: Request, context: some RequestContext) async throws -> Movie? {
        
-    //         guard let id = context.parameters.get("id", as: Int.self) else {
-    //             throw HTTPError(.badRequest)
-    //         }
-    //         return await repository.getMovie(id)
-    //     }
+            guard let id = context.parameters.get("id", as: UUID.self) else {
+                throw HTTPError(.badRequest)
+            }
+            guard let movie = try await repository.getById(id) else {
+                throw HTTPError(.notFound)
+            }
+            return movie
+        }
 
-    // 
+    
     }
 
 
