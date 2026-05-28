@@ -1,6 +1,11 @@
 import Foundation
 import PostgresNIO
 
+enum MovieError: Error {
+    case notFound
+}
+
+
 struct MovieRepository {
     let client: PostgresClient
 
@@ -52,5 +57,13 @@ struct MovieRepository {
         )
 
         return Movie(id: id, title: movie.title, year: movie.year)
+    }
+
+    func delete(_ id: UUID) async throws -> Movie {
+        guard let movie = try await getById(id) else {
+            throw MovieError.notFound
+        }
+        try await self.client.query("DELETE FROM movies WHERE id = \(id);")
+        return movie
     }
 }
