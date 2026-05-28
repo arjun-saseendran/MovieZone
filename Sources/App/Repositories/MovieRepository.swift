@@ -14,6 +14,20 @@ struct MovieRepository {
                     )
             """)
     }
+
+    func getAll() async throws -> [Movie] {
+        let stream = try await self.client.query("SELECT id, title, year FROM movies;")
+        var movies: [Movie] = []
+
+        for try await (id, title, year) in stream.decode(
+            (UUID, String, Int).self, context: .default)
+        {
+            let movie = Movie(id: id, title: title, year: year)
+            movies.append(movie)
+        }
+        return movies
+    }
+
     func save(_ movie: Movie) async throws -> Movie {
         let id = UUID()
         try await self.client.query(
