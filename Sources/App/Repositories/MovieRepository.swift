@@ -66,4 +66,21 @@ struct MovieRepository {
         try await self.client.query("DELETE FROM movies WHERE id = \(id);")
         return movie
     }
+
+    func update(_ movie: Movie) async throws -> Movie {
+        guard let id = movie.id,
+        let _ = try await getById(id)
+        else {
+            throw MovieError.notFound
+        }
+
+        try await self.client.query("""
+        
+        UPDATE movies
+        set title = \(movie.title), year = \(movie.year)
+        WHERE id = \(id);
+        
+        """)
+        return movie
+    }
 }

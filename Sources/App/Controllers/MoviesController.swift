@@ -9,6 +9,7 @@ struct MoviesController {
         routeCollection.get(":id", use: getMovie)
         routeCollection.post(use: createMovie)
         routeCollection.delete(":id", use: deleteMovie)
+        routeCollection.put(use: updateMovie)
         return routeCollection
     }
 
@@ -17,11 +18,11 @@ struct MoviesController {
         return try await repository.save(movie)
     }
 
-    func getMovies(request _: Request, context _: some RequestContext) async throws -> [Movie] {
+    func getMovies(request: Request, context _: some RequestContext) async throws -> [Movie] {
         try await repository.getAll()
     }
 
-    func getMovie(request _: Request, context: some RequestContext) async throws -> Movie? {
+    func getMovie(request: Request, context: some RequestContext) async throws -> Movie? {
         guard let id = context.parameters.get("id", as: UUID.self) else {
             throw HTTPError(.badRequest)
         }
@@ -31,7 +32,12 @@ struct MoviesController {
         return movie
     }
 
-    func deleteMovie(request _: Request, context: some RequestContext) async throws -> Movie {
+    func updateMovie(request: Request, context: some RequestContext) async throws -> Movie {
+        let movie = try await request.decode(as: Movie.self, context: context)
+        return try await repository.update(movie)
+    }
+
+    func deleteMovie(request: Request, context: some RequestContext) async throws -> Movie {
         guard let id = context.parameters.get("id", as: UUID.self) else {
             throw HTTPError(.badRequest)
         }
