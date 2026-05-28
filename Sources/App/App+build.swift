@@ -1,16 +1,9 @@
 import Configuration
+import Foundation
 import Hummingbird
 import Logging
 import PostgresNIO
-import Foundation
 
-struct Movie {
-    var id: UUID?
-    let title: String
-    let year: Int
-}
-
-extension Movie: ResponseEncodable, Decodable, Equatable {}
 
 // Request context used by application
 typealias AppRequestContext = BasicRequestContext
@@ -24,28 +17,27 @@ func buildApplication(reader: ConfigReader) async throws -> some ApplicationProt
         return logger
     }()
 
-    var movieRepositoy: MovieRepository?
     var router: Router<AppRequestContext>
 
     let client = PostgresClient(
         configuration: .init(
-            host: "localhost", port:5432, username: "postgres", password: "postgres", database: "moviesdb",
+            host: "localhost", port: 5432, username: "postgres", password: "postgres",
+            database: "moviesdb",
             tls: .disable))
 
-    let repository = MovieRepository(client: client)
-    movieRepositoy = repository
+    let movieRepository = MovieRepository(client: client)
 
-    router = try buildRouter(repository)
+    router = try buildRouter(movieRepository)
     var app = Application(
         router: router,
         configuration: ApplicationConfiguration(reader: reader.scoped(to: "http")),
         logger: logger
     )
-    if let movieRepositoy {
-        app.addServices(movieRepositoy.client)
-        app.beforeServerStarts {
-            try await movieRepositoy.createTable()
-        }
+
+    app.addServices(movieRepository.client)
+    app.beforeServerStarts {
+        try await movieRepository.createTable()
+
     }
 
     return app

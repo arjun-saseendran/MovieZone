@@ -1,11 +1,6 @@
 import Foundation
 import PostgresNIO
 
-enum MovieError: Error {
-    case notFound
-}
-
-
 struct MovieRepository {
     let client: PostgresClient
 
@@ -13,7 +8,7 @@ struct MovieRepository {
         try await client.query(
             """
                     CREATE TABLE IF NOT EXISTS movies(
-                    id UUID PRIMARY KEY,
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     title TEXT NOT NULL,
                     year INTEGER NOT NULL
                     )
@@ -35,28 +30,35 @@ struct MovieRepository {
     }
 
     func getById(_ id: UUID) async throws -> Movie? {
-        let stream = try await client.query("""
-        SELECT id, title, year
-        FROM movies
-        WHERE id = \(id)
-        LIMIT 1;
-        """)
-        for try await (id, title, year) in stream.decode((UUID, String, Int).self, context: .default) {
+        let stream = try await client.query(
+            """
+            SELECT id, title, year
+            FROM movies
+            WHERE id = \(id)
+            LIMIT 1;
+            """)
+        for try await (id, title, year) in stream.decode(
+            (UUID, String, Int).self, context: .default)
+        {
             return Movie(id: id, title: title, year: year)
         }
         return nil
     }
 
     func save(_ movie: Movie) async throws -> Movie {
-        let id = UUID()
-        try await client.query(
+
+        let stream = try await client.query(
             """
             INSERT IN TO movies(id, title, year)
-            VALUES(\(id),\(movie.title), \(movie.year));
+            VALUES(\(movie.title), \(movie.year))
+            RETURNING id;
             """
         )
+        for try await id in stream.decode(UUID.self, context: .default) {
 
-        return Movie(id: id, title: movie.title, year: movie.year)
+            return Movie(id: id, title: movie.title, year: movie.year)
+        }
+        throw DatabaseError.insertFailed
     }
 
     func delete(_ id: UUID) async throws -> Movie {
@@ -69,18 +71,19 @@ struct MovieRepository {
 
     func update(_ movie: Movie) async throws -> Movie {
         guard let id = movie.id,
-        let _ = try await getById(id)
+            (try await getById(id)) != nil
         else {
             throw MovieError.notFound
         }
 
-        try await self.client.query("""
-        
-        UPDATE movies
-        set title = \(movie.title), year = \(movie.year)
-        WHERE id = \(id);
-        
-        """)
+        try await self.client.query(
+            """
+
+            UPDATE movies
+            set title = \(movie.title), year = \(movie.year)
+            WHERE id = \(id);
+
+            """)
         return movie
     }
 }
